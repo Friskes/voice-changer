@@ -1,0 +1,15 @@
+# Белый список: рядом лежат Applio, модели и записи голоса, в git идёт только перечисленное ниже.
+/*
+!/.gitignore
+!/.gitattributes
+!/LICENSE
+!/README.md
+!/README.ru.md
+!/*.bat
+!/install.ps1
+!/model/
+!/patches/
+!/tools/
+
+__pycache__/
+*.pyc

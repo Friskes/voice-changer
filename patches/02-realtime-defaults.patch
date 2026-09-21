@@ -1,0 +1,63 @@
+--- a/tabs/realtime/realtime.py
++++ b/tabs/realtime/realtime.py
+@@ -988,7 +988,7 @@
+             info=i18n(
+                 "Please ensure compliance with the terms and conditions detailed in [this document](https://github.com/IAHispano/Applio/blob/main/TERMS_OF_USE.md) before proceeding with your realtime."
+             ),
+-            value=False,
++            value=True,
+             interactive=True,
+         )
+
+@@ -1580,7 +1580,7 @@
+                         info=i18n(
+                             "Set the pitch of the audio, the higher the value, the higher the pitch."
+                         ),
+-                        value=0,
++                        value=14,
+                         interactive=True,
+                     )
+                     index_rate = gr.Slider(
+@@ -1590,13 +1590,13 @@
+                         info=i18n(
+                             "Influence exerted by the index file; a higher value corresponds to greater influence. However, opting for lower values can help mitigate artifacts present in the audio."
+                         ),
+-                        value=0,  # The index is not always necessary, so disabling it can help improve latency.
++                        value=0.75,
+                         interactive=True,
+                     )
+                     volume_envelope = gr.Slider(
+                         minimum=0,
+                         maximum=1,
+-                        value=1,
++                        value=0,
+                         label=i18n("Volume Envelope"),
+                         info=i18n(
+                             "Substitute or blend with the volume envelope of the output. The closer the ratio is to 1, the more the output envelope is employed."
+@@ -1606,7 +1606,7 @@
+                     protect = gr.Slider(
+                         minimum=0,
+                         maximum=0.5,
+-                        value=0.33,
++                        value=0.5,
+                         label=i18n("Protect Voiceless Consonants"),
+                         info=i18n(
+                             "Safeguard distinct consonants and breathing sounds to prevent electro-acoustic tearing and other artifacts. Pulling the parameter to its maximum value of 0.5 offers comprehensive protection. However, reducing this value might decrease the extent of protection while potentially mitigating the indexing effect."
+@@ -1671,7 +1671,7 @@
+                 chunk_size = gr.Slider(
+                     minimum=2.7,
+                     maximum=2730.7,
+-                    value=250,
++                    value=100,
+                     step=1,
+                     label=i18n("Chunk Size (ms)"),
+                     info=i18n(
+@@ -1693,7 +1693,7 @@
+                 extra_convert_size = gr.Slider(
+                     minimum=0.1,
+                     maximum=5,
+-                    value=2.5,
++                    value=0.5,
+                     step=0.1,
+                     label=i18n("Extra Conversion Size (s)"),
+                     info=i18n(

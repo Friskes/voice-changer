@@ -1,0 +1,6 @@
+* text=auto
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.py text eol=lf
+*.patch text eol=lf
+*.md text eol=lf
