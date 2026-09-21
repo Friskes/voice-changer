@@ -14,12 +14,12 @@ flowchart LR
 
 ## How it sounds
 
-GitHub shows no audio player in a README, so the links go straight to the files and open in the browser's player.
+Listen to "before" and "after" on the [page with a player](https://friskes.github.io/voice-changer/): GitHub doesn't play audio in a README.
 
 | Recording | File | Average pitch |
 | --- | --- | --- |
-| Before | [before.mp3](https://github.com/Friskes/voice-changer/raw/main/samples/before.mp3) | 160 Hz |
-| After | [after.mp3](https://github.com/Friskes/voice-changer/raw/main/samples/after.mp3) | 268 Hz |
+| Before | [before.mp3](docs/before.mp3) | 160 Hz |
+| After | [after.mp3](docs/after.mp3) | 268 Hz |
 
 "After" comes from the realtime engine, not from ordinary file conversion: the recording goes through in 100 ms blocks, as in a live call, with the `ru-masha-200` model and this repo's default settings. Only Pitch differs: +9 instead of +14, because the speaker's voice is higher than mine. The command: `tool stream_sim --src before.wav --pitch 9`. After the engine the recording was only trimmed and encoded to mp3; volume and timbre were not touched. The source is a studio line by the actor Dima from the [Dialogs](https://huggingface.co/datasets/langswap/dialogs-ru-emotional-conversations) corpus (OpenRAIL), file `masha_dima_part8_166.wav`, with silence trimmed and loudness levelled; both mp3 files are covered by the [corpus license](model/LICENSE-Dialogs-OpenRAIL.md).
 

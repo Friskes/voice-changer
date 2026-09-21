@@ -14,12 +14,12 @@ flowchart LR
 
 ## Как звучит
 
-GitHub не показывает аудиоплеер в README, поэтому ссылки ведут прямо на файлы — они откроются в плеере браузера.
+Послушать «до» и «после» можно на [странице с плеером](https://friskes.github.io/voice-changer/): в README GitHub аудио не проигрывает.
 
 | Запись | Файл | Средний тон |
 | --- | --- | --- |
-| До | [before.mp3](https://github.com/Friskes/voice-changer/raw/main/samples/before.mp3) | 160 Гц |
-| После | [after.mp3](https://github.com/Friskes/voice-changer/raw/main/samples/after.mp3) | 268 Гц |
+| До | [before.mp3](docs/before.mp3) | 160 Гц |
+| После | [after.mp3](docs/after.mp3) | 268 Гц |
 
 «После» — это realtime-движок, а не обычная конвертация файла: запись идёт блоками по 100 мс, как в живом разговоре, с моделью `ru-masha-200` и настройками по умолчанию из этого репозитория. Отличается только Pitch: +9 вместо +14, потому что у диктора голос выше моего. Команда: `tool stream_sim --src before.wav --pitch 9`. После движка запись только обрезана и пережата в mp3, громкость и тембр не правились. Исходник — студийная реплика актёра Димы из корпуса [Dialogs](https://huggingface.co/datasets/langswap/dialogs-ru-emotional-conversations) (OpenRAIL), файл `masha_dima_part8_166.wav`, с обрезанной тишиной и выровненной громкостью; на оба mp3 действует [лицензия корпуса](model/LICENSE-Dialogs-OpenRAIL.md).
 

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>voice-changer — как звучит</title>
+<style>
+  :root { color-scheme: light dark; --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --line: #d1d9e0; --link: #0969da; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0d1117; --fg: #f0f6fc; --muted: #9198a1; --line: #3d444d; --link: #4493f8; }
+  }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: 26px; line-height: 1.25; margin: 0 0 12px; }
+  h2 { font-size: 17px; margin: 0; }
+  p { margin: 0 0 16px; }
+  section { border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin: 0 0 16px; }
+  section p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+  audio { display: block; width: 100%; margin-top: 12px; }
+  .note { color: var(--muted); font-size: 14px; }
+  a { color: var(--link); }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>voice-changer: как звучит</h1>
+  <p>Мужской голос превращается в женский на лету. «После» — это realtime-движок, а не обычная конвертация файла: звук идёт блоками по 100 мс, как в живом разговоре в Discord.</p>
+
+  <section>
+    <h2>До</h2>
+    <p>Актёр Дима из корпуса Dialogs, средний тон 160 Гц</p>
+    <audio controls preload="metadata" src="before.mp3"></audio>
+  </section>
+
+  <section>
+    <h2>После</h2>
+    <p>Модель ru-masha-200, Pitch +9, остальное по умолчанию; средний тон 268 Гц</p>
+    <audio controls preload="metadata" src="after.mp3"></audio>
+  </section>
+
+  <p class="note">После движка запись только обрезана и пережата в mp3, громкость и тембр не правились. В realtime отдельные согласные выходят хуже, чем при обычной конвертации; фраза выбрана из тех, где этого не слышно. Подробности, установка и ограничения — в <a href="https://github.com/Friskes/voice-changer">репозитории</a>. Обе записи распространяются по <a href="https://github.com/Friskes/voice-changer/blob/main/model/LICENSE-Dialogs-OpenRAIL.md">лицензии OpenRAIL корпуса Dialogs</a>.</p>
+
+  <hr>
+
+  <p class="note" lang="en">In English: a male voice turned female on the fly. "После" (after) comes from the realtime engine in 100 ms blocks, as in a live call, with the ru-masha-200 model, Pitch +9 and otherwise default settings; "До" (before) is the actor Dima from the Dialogs corpus. Setup and limitations are in the <a href="https://github.com/Friskes/voice-changer/blob/main/README.en.md">repository</a>.</p>
+</main>
+</body>
+</html>

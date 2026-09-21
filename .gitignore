@@ -7,9 +7,9 @@
 !/README.en.md
 !/*.bat
 !/install.ps1
+!/docs/
 !/model/
 !/patches/
-!/samples/
 !/tools/
 
 __pycache__/
