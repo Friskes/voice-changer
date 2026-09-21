@@ -1,0 +1,29 @@
+--- a/rvc/realtime/core.py
++++ b/rvc/realtime/core.py
+@@ -471,6 +471,8 @@
+         self.crossfade_frame = int(cross_fade_overlap_size * AUDIO_SAMPLE_RATE)
+         self.extra_frame = int(extra_convert_size * AUDIO_SAMPLE_RATE)
+         self.sola_search_frame = AUDIO_SAMPLE_RATE // 100
++        # Запас «будущего» 50 мс: у правого края окна contentvec считает признаки плохо, и согласные смазываются.
++        self.lookahead_frame = AUDIO_SAMPLE_RATE // 20
+         self.sola_buffer = None
+         self.vc_model = Realtime(
+             model_path,
+@@ -493,7 +495,7 @@
+         self.vc_model.realloc(
+             self.block_frame,
+             self.extra_frame,
+-            self.crossfade_frame,
++            self.crossfade_frame + self.lookahead_frame,
+             self.sola_search_frame,
+         )
+         self.generate_strength()
+@@ -574,6 +576,8 @@
+                 self.soundfile.write(silence_output)
+             return silence_output, vol
+
++        audio = audio[: audio.shape[0] - self.lookahead_frame]
++
+         # Detect silence-to-speech transition for onset-aware fade-in.
+         is_onset = not self.sola_buffer.any()
+

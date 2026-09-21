@@ -1,49 +1,64 @@
 # voice-changer
 
-English | [Русский](README.ru.md)
+Русский | [English](README.en.md)
 
-Real-time voice changing for Discord and games, built on [Applio](https://github.com/IAHispano/Applio) 3.6.5 (RVC). Applio itself is not in this repo: the installer downloads the official build, patches three bugs in its realtime engine and adds a ready-made female Russian voice model. The rest is scripts for picking a pitch, training your own model and finding out why the audio breaks up.
+Смена голоса в реальном времени для Discord и игр на базе [Applio](https://github.com/IAHispano/Applio) 3.6.5 (RVC). Сам Applio в репозиторий не входит: установщик скачивает официальную сборку, накладывает на неё четыре исправления realtime-движка и ставит готовую модель женского русского голоса. Рядом лежат скрипты для подбора тона, обучения своей модели и поиска причин, по которым звук рвётся.
 
 ```mermaid
 flowchart LR
-    mic[Microphone] --> applio[Applio Realtime]
-    applio --> cable[Virtual cable]
-    cable --> app[Discord / game]
-    applio -.-> phones[Headphones, monitor]
+    mic[Микрофон] --> applio[Applio Realtime]
+    applio --> cable[Виртуальный кабель]
+    cable --> app[Discord / игра]
+    applio -.-> phones[Наушники, монитор]
 ```
 
-## What is fixed in Applio
+## Как звучит
 
-All three bugs showed up in live calls with a game running. The changes are in [patches/01-realtime-fixes.patch](patches/01-realtime-fixes.patch).
+GitHub не показывает аудиоплеер в README, поэтому ссылки ведут прямо на файлы — они откроются в плеере браузера.
 
-| File | Before | After |
+| Запись | Файл | Средний тон |
 | --- | --- | --- |
-| `rvc/realtime/core.py` | Output was multiplied by the input level: speech came out 20–30 dB quieter and quiet syllables vanished | A gate: silence is muted, speech passes at full volume |
-| `rvc/realtime/audio.py` | Main output and monitor read from one queue and took blocks from each other; after the input stopped, the callback hung and the Stop button did nothing | A separate queue for the main output, reads time out after 1 s |
-| `rvc/realtime/callbacks.py` | When the GPU was late, the previous block was replayed, so the listener heard words several times | Waits for the result up to 60% of the block length, then outputs silence |
+| До | [before.mp3](https://github.com/Friskes/voice-changer/raw/main/samples/before.mp3) | 160 Гц |
+| После | [after.mp3](https://github.com/Friskes/voice-changer/raw/main/samples/after.mp3) | 268 Гц |
 
-The second patch, [02-realtime-defaults.patch](patches/02-realtime-defaults.patch), changes slider defaults. Applio only remembers devices and the model between launches, so everything else would have to be set again every time.
+«После» — это realtime-движок, а не обычная конвертация файла: запись идёт блоками по 100 мс, как в живом разговоре, с моделью `ru-masha-200` и настройками по умолчанию из этого репозитория. Отличается только Pitch: +9 вместо +14, потому что у диктора голос выше моего. Команда: `tool stream_sim --src before.wav --pitch 9`. После движка запись только обрезана и пережата в mp3, громкость и тембр не правились. Исходник — студийная реплика актёра Димы из корпуса [Dialogs](https://huggingface.co/datasets/langswap/dialogs-ru-emotional-conversations) (OpenRAIL), файл `masha_dima_part8_166.wav`, с обрезанной тишиной и выровненной громкостью; на оба mp3 действует [лицензия корпуса](model/LICENSE-Dialogs-OpenRAIL.md).
 
-| Setting | Applio | Here |
+Чего ждать не стоит. В realtime отдельные согласные выходят хуже, чем при обычной конвертации того же файла: чтобы чисто произнести, например, мягкую «с», модели нужно слышать около 0,3 с следующих звуков, а живой поток даёт 0,1–0,2 с. Изредка «с» звучит как «щ». Фраза для примера выбрана из тех, где этого не происходит. И качество на выходе зависит от входа: с дешёвого микрофона в шумной комнате получится хуже. Про прерывания и искажения в игре — раздел [«Если звук рвётся»](#если-звук-рвётся).
+
+## Что исправлено в Applio
+
+Первые три проблемы проявлялись в живом разговоре при запущенной игре, правки лежат в [patches/01-realtime-fixes.patch](patches/01-realtime-fixes.patch). Четвёртая нашлась при подготовке примера выше, она в [patches/03-realtime-lookahead.patch](patches/03-realtime-lookahead.patch).
+
+| Файл | Было | Стало |
+| --- | --- | --- |
+| `rvc/realtime/core.py` | Выход умножался на громкость входа: речь получалась тише на 20–30 дБ, тихие слоги пропадали | Гейт: тишина глушится, речь идёт на полной громкости |
+| `rvc/realtime/audio.py` | Основной выход и монитор читали одну очередь и забирали блоки друг у друга; после остановки входа колбэк зависал, кнопка «Стоп» не срабатывала | Отдельная очередь на основной выход, чтение с таймаутом 1 с |
+| `rvc/realtime/callbacks.py` | Если видеокарта не успевала, повторялся прошлый блок — собеседник слышал слова по нескольку раз | Результат ждём до 60% длины блока, дальше отдаём тишину |
+| `rvc/realtime/core.py` | Наружу уходил самый край обработанного куска, где модель ещё не слышала следующих звуков: согласные смазывались | Запас 50 мс: наружу идёт звук чуть дальше от края. Задержка выросла на 50 мс, ошибок в распознанных фонемах на 12 репликах стало 19 % вместо 21 % |
+
+Второй патч, [02-realtime-defaults.patch](patches/02-realtime-defaults.patch), меняет значения ползунков по умолчанию. Applio запоминает между запусками только устройства и модель, остальное каждый раз пришлось бы выставлять заново.
+
+| Настройка | Applio | Здесь |
 | --- | --- | --- |
 | Pitch | 0 | 14 |
 | Search Feature Ratio | 0 | 0.75 |
 | Volume Envelope | 1 | 0 |
 | Protect Voiceless Consonants | 0.33 | 0.5 |
-| Chunk Size | 250 ms | 100 ms |
-| Extra Conversion Size | 2.5 s | 0.5 s |
+| Chunk Size | 250 мс | 100 мс |
 
-Pitch 14 was picked for my voice; 12 is exactly one octave up, male to female. `record-my-voice.bat` (below) suggests a value for yours. To make it the default, change `value=14` in the patch before installing, or in `Applio/tabs/realtime/realtime.py` afterwards.
+`Extra Conversion Size` оставлен как в Applio, 2,5 с, и снижать его не стоит. Это сколько звука до текущего блока слышит модель; при 0,5 с ошибок в распознанных фонемах 27 % против 21 %, а время обработки блока на RTX 5070 Ti то же, 33–34 мс.
 
-The same patch pre-ticks the checkbox that accepts [Applio's terms of use](https://github.com/IAHispano/Applio/blob/main/TERMS_OF_USE.md) on the Realtime tab, so it doesn't have to be clicked on every launch. By installing this build you accept those terms. If you don't, remove the first hunk from the patch.
+Pitch 14 подобран под мой голос; 12 — ровно октава вверх, из мужского в женский. Свой Pitch подбирается скриптом `record-my-voice.bat` (ниже). Чтобы он стал значением по умолчанию, поправь `value=14` в патче до установки или в `Applio/tabs/realtime/realtime.py` после неё.
 
-## Requirements
+Тот же патч заранее ставит галочку согласия с [условиями использования Applio](https://github.com/IAHispano/Applio/blob/main/TERMS_OF_USE.md) во вкладке Realtime, чтобы не нажимать её при каждом запуске. Устанавливая эту сборку, ты принимаешь эти условия. Не согласен — убери из патча первый блок.
 
-- Windows 10 or 11 and an NVIDIA GPU. Tested on an RTX 5070 Ti 16 GB, driver 616.56.
-- 15 GB of disk space: the Applio archive is 4.6 GB and unpacks to 7 GB. Training needs about 5 GB more.
-- A virtual audio cable: [VB-CABLE](https://vb-audio.com/Cable/) (free) or [Virtual Audio Cable](https://vac.muzychenko.net/en/) (paid). I use the latter; the scripts handle both.
+## Что нужно
 
-## Install
+- Windows 10 или 11, видеокарта NVIDIA. Проверено на RTX 5070 Ti 16 ГБ, драйвер 616.56.
+- 15 ГБ на диске: архив Applio 4,6 ГБ плюс 7 ГБ после распаковки. Для обучения — ещё около 5 ГБ.
+- Виртуальный аудиокабель: [VB-CABLE](https://vb-audio.com/Cable/) (бесплатный) или [Virtual Audio Cable](https://vac.muzychenko.net/en/) (платный). Я пользуюсь вторым, скрипты понимают оба.
+
+## Установка
 
 ```bat
 git clone https://github.com/Friskes/voice-changer.git C:\voice-changer
@@ -51,64 +66,66 @@ cd /d C:\voice-changer
 install.bat
 ```
 
-Keep the path short: the longest path inside Applio is 141 characters, and Windows limits a full path to 260 by default.
+Клади репозиторий в короткий путь: самый длинный путь внутри Applio — 141 символ, а Windows по умолчанию ограничивает полный путь 260 символами.
 
-`install.bat` downloads `ApplioV3.6.5.zip` from [Applio's HuggingFace page](https://huggingface.co/IAHispano/Applio/tree/main/Compiled/Windows), checks its SHA256, unpacks it into `Applio\` and applies the patches, then downloads the voice model from the [release](https://github.com/Friskes/voice-changer/releases). Originals of the patched files stay next to them as `.orig`. If you already have the Applio archive: `install.bat -ApplioZip D:\path\ApplioV3.6.5.zip`. To skip the model: `install.bat -NoModel`. Running it again is safe. To undo the patches: `tool apply_patches --revert`.
+`install.bat` скачивает `ApplioV3.6.5.zip` с [HuggingFace-страницы Applio](https://huggingface.co/IAHispano/Applio/tree/main/Compiled/Windows), сверяет SHA256, распаковывает в `Applio\` и накладывает патчи, затем качает модель голоса из [релиза](https://github.com/Friskes/voice-changer/releases). Оригиналы изменённых файлов остаются рядом с расширением `.orig`. Если архив Applio уже скачан: `install.bat -ApplioZip D:\путь\ApplioV3.6.5.zip`. Без модели: `install.bat -NoModel`. Повторный запуск ничего не ломает. Откатить патчи: `tool apply_patches --revert`.
 
-## Voice model
+## Модель голоса
 
-The installer puts `ru-masha-200` (440 MB) into `Applio\logs\ru-masha-200\`: a female Russian voice trained on the Dialogs corpus. Training details and licensing are in [model/README.md](model/README.md). The corpus's [OpenRAIL license](model/LICENSE-Dialogs-OpenRAIL.md) applies to the model: free to use, commercially too, within the restrictions of its Section 2.
+Установщик кладёт в `Applio\logs\ru-masha-200\` модель `ru-masha-200` (440 МБ) — женский русский голос, обученный на корпусе Dialogs. Параметры обучения и лицензия описаны в [model/README.md](model/README.md). На модель действует [лицензия OpenRAIL](model/LICENSE-Dialogs-OpenRAIL.md) корпуса: пользоваться можно свободно, в том числе коммерчески, но с ограничениями из её раздела 2.
 
-Any other RVC v2 model works as well: put its `.pth` and `.index` into `Applio\logs\<name>\`.
+Подойдёт и любая другая модель RVC v2: положи `.pth` и `.index` в `Applio\logs\<имя>\`.
 
-Or train one:
+Либо обучи свою:
 
 ```bat
 train-voice.bat M ru-masha 200
 ```
 
-Arguments: speaker (`M` or `S`), model name, epochs. The script takes 45 minutes of one actress from the Russian [Dialogs](https://huggingface.co/datasets/langswap/dialogs-ru-emotional-conversations) corpus (OpenRAIL license), downloads the [SnowieV3.1](https://huggingface.co/MUSTAR/SnowieV3.1-40k) pretrain (1.2 GB, SHA256-checked) and runs Applio training. 200 epochs took about two hours on an RTX 5070 Ti. Progress goes to `logs\train-<name>.log`, the model ends up in `Applio\logs\<name>\`. With less than 16 GB of VRAM, lower `BATCH` in [tools/train_voice.py](tools/train_voice.py).
+Аргументы: актриса (`M` или `S`), имя модели, число эпох. Скрипт берёт 45 минут речи одной актрисы из корпуса [Dialogs](https://huggingface.co/datasets/langswap/dialogs-ru-emotional-conversations) (лицензия OpenRAIL), качает претрейн [SnowieV3.1](https://huggingface.co/MUSTAR/SnowieV3.1-40k) (1,2 ГБ, с проверкой SHA256) и запускает обучение Applio. 200 эпох на RTX 5070 Ti заняли около двух часов. Ход пишется в `logs\train-<имя>.log`, готовая модель появляется в `Applio\logs\<имя>\`. Если видеопамяти меньше 16 ГБ, уменьши `BATCH` в [tools/train_voice.py](tools/train_voice.py).
 
-## Run
+## Запуск
 
-1. `run.bat` opens `http://127.0.0.1:6969` in the browser.
-2. Realtime tab: input is your microphone, output is the virtual cable, monitor is your headphones (optional). Pick the `ru-masha-200` model and press Start.
-3. In Discord or the game, select the recording side of the same cable as the microphone: `CABLE Output` for VB-CABLE, the same-named `Line 1` for Virtual Audio Cable.
+1. `run.bat` — в браузере откроется `http://127.0.0.1:6969`.
+2. Вкладка Realtime: вход — микрофон, выход — виртуальный кабель, монитор — наушники (по желанию). Выбери модель `ru-masha-200` и нажми «Старт».
+3. В Discord или в игре выбери микрофоном записывающую сторону того же кабеля: у VB-CABLE это `CABLE Output`, у Virtual Audio Cable — одноимённая `Line 1`.
 
-If Applio hangs, `stop-applio.bat` kills it.
+Остановить зависший Applio — `stop-applio.bat`.
 
-## Picking the pitch
+## Подбор тона
 
-`record-my-voice.bat` records 30 seconds from the microphone into `logs\refs\my_voice.wav`, measures your average pitch and prints which Pitch value gets you to 235 Hz (a typical female voice) and 255 Hz (higher). The tests below reuse this recording. The phrases it asks you to read are Russian; any speech will do.
+`record-my-voice.bat` пишет 30 секунд с микрофона в `logs\refs\my_voice.wav`, измеряет твой средний тон и печатает, какой Pitch даст 235 Гц (обычный женский голос) и 255 Гц (повыше). Эту же запись используют тесты ниже.
 
-## When the audio breaks up
+## Если звук рвётся
 
-The scripts take devices and the model from Applio's config, i.e. whatever is selected on the Realtime tab. Override with environment variables holding part of a device name: `VC_MIC`, `VC_CABLE`, `VC_HEADPHONES`, `VC_VIRTUAL_MIC`.
+В игре голос может прерываться и искажаться. Игра и Applio делят одну видеокарту, и когда игра занимает её целиком, блок не успевает обработаться за свои 100 мс. Проверено только на RTX 5070 Ti, на картах слабее запас меньше. Помогает ограничить FPS или снизить графику, чтобы видеокарте было куда вздохнуть, либо увеличить `Chunk Size`: блоку даётся больше времени, но растёт задержка. `tool battle_monitor` из таблицы ниже покажет долю провалов и загрузку видеокарты в эти моменты.
 
-| Command | What it shows |
+Устройства и модель скрипты берут из конфига Applio — то, что выбрано во вкладке Realtime. Переопределить можно переменными окружения с частью имени устройства: `VC_MIC`, `VC_CABLE`, `VC_HEADPHONES`, `VC_VIRTUAL_MIC`.
+
+| Команда | Что показывает |
 | --- | --- |
-| `probe.bat` | 10 seconds of microphone and cable levels side by side, in 0.1 s steps. Shows where the output is silent while you talk |
-| `tool battle_monitor 180` | The same over 3 minutes of actual play: share of dropouts, latency, GPU load at the moments of dropouts |
-| `tool stream_sim` | Runs a recording through the engine with no audio devices: share of quiet windows in the input and in the output, inference time. Many more quiet windows in the output: blame the model or settings; numbers close: look at the devices. See `--help` |
-| `tool live_loop_test` | The whole path with no human. Needs a second virtual cable (`VC_VIRTUAL_MIC`); stop Applio first |
-| `tool my_voice_pitch` | Converts your recording at Pitch +10 to +16 and estimates how female and how old each result sounds |
-| `tool make_audition <folder>` | A listening reel plus the same estimates for candidate voices; one subfolder per candidate |
-| `tools\endpoint_volumes.ps1` | System volume and mute state of every audio device |
+| `probe.bat` | 10 секунд: уровни микрофона и кабеля рядом, по 0,1 с. Видно, где на выходе тишина, пока ты говоришь |
+| `tool battle_monitor 180` | То же на 3 минутах во время игры: доля провалов, задержка, загрузка видеокарты в моменты провалов |
+| `tool stream_sim` | Прогон записи через движок без аудиоустройств: доля тихих окон на входе и на выходе, время инференса. На выходе тихих окон заметно больше — виноваты модель или настройки, цифры близки — ищи в устройствах. `--help` покажет параметры |
+| `tool live_loop_test` | Полный тракт без человека. Нужен второй виртуальный кабель (`VC_VIRTUAL_MIC`), Applio на время теста остановить |
+| `tool my_voice_pitch` | Конвертирует твою запись с Pitch от +10 до +16 и оценивает, насколько результат звучит женским и на какой возраст |
+| `tool make_audition <папка>` | Склейка-прослушка и те же оценки для голосов-кандидатов; каждая подпапка — один кандидат |
+| `tools\endpoint_volumes.ps1` | Системная громкость и mute всех аудиоустройств |
 
-On first run `my_voice_pitch` and `make_audition` download the [audeering age-gender](https://huggingface.co/audeering/wav2vec2-large-robust-24-ft-age-gender) model (1.2 GB, CC BY-NC-SA 4.0, non-commercial use only).
+`my_voice_pitch` и `make_audition` при первом запуске качают модель [audeering age-gender](https://huggingface.co/audeering/wav2vec2-large-robust-24-ft-age-gender) (1,2 ГБ, лицензия CC BY-NC-SA 4.0 — только некоммерческое использование).
 
-Script output is in Russian.
+Сообщения скриптов — на русском.
 
-## Security
+## Безопасность
 
-- Model files (`.pth`) are Python pickles: loading one can run arbitrary code. Only use models from sources you trust. The Applio archive, the release model and the pretrain are checked against SHA256 hashes pinned in [install.ps1](install.ps1) and [tools/train_voice.py](tools/train_voice.py).
-- Applio listens on `127.0.0.1` only. Don't start it with `--share` and don't change `--server-name`: the UI has no password.
-- Applio, models, datasets and voice recordings never get into git: [.gitignore](.gitignore) is a whitelist.
+- Файлы моделей `.pth` — это Python pickle: при загрузке такой файл может выполнить произвольный код. Бери модели только из источников, которым доверяешь. Архив Applio, модель из релиза и претрейн сверяются по SHA256, хеши записаны в [install.ps1](install.ps1) и [tools/train_voice.py](tools/train_voice.py).
+- Applio слушает только `127.0.0.1`. Не запускай его с `--share` и не меняй `--server-name`: у интерфейса нет пароля.
+- Applio, модели, датасеты и записи голоса в git не попадают: [.gitignore](.gitignore) устроен как белый список.
 
-## Responsible use
+## Ответственное использование
 
-[Applio's terms of use](https://github.com/IAHispano/Applio/blob/main/TERMS_OF_USE.md) and the restrictions of the [model license](model/LICENSE-Dialogs-OpenRAIL.md) apply. Don't impersonate a real person, and don't train a model on someone's voice without their consent.
+Действуют [условия использования Applio](https://github.com/IAHispano/Applio/blob/main/TERMS_OF_USE.md) и ограничения [лицензии модели](model/LICENSE-Dialogs-OpenRAIL.md). Не выдавай себя за реального человека и не обучай модель на чужом голосе без согласия его владельца.
 
-## License
+## Лицензия
 
-Code: [MIT](LICENSE). The patches modify Applio code, which is also [MIT](https://github.com/IAHispano/Applio/blob/main/LICENSE), © AI Hispano. The model in the release: [OpenRAIL](model/LICENSE-Dialogs-OpenRAIL.md).
+Код — [MIT](LICENSE). Патчи изменяют код Applio, он тоже под [MIT](https://github.com/IAHispano/Applio/blob/main/LICENSE), © AI Hispano. Модель из релиза — [OpenRAIL](model/LICENSE-Dialogs-OpenRAIL.md).

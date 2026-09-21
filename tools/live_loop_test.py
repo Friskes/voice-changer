@@ -29,7 +29,7 @@ cb = AudioCallbacks(
     pass_through=False, block_frame=block, cross_fade_overlap_size=0.05, extra_convert_size=2.5,
     model_path=pth, index_path=idx,
     f0_method="rmvpe", embedder_model="contentvec", embedder_model_custom=None, silent_threshold=-90,
-    f0_up_key=12, index_rate=0.75, protect=0.5, volume_envelope=0.0,
+    f0_up_key=14, index_rate=0.75, protect=0.5, volume_envelope=0.0,
     f0_autotune=False, f0_autotune_strength=1.0, proposed_pitch=False, proposed_pitch_threshold=255.0,
     input_audio_gain=1.0, output_audio_gain=1.0, monitor_audio_gain=0.0, monitor=USE_MONITOR,
     vad_enabled=False, vad_sensitivity=3, vad_frame_ms=30, sid=0, clean_audio=False, clean_strength=0.5,

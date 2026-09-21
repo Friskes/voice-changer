@@ -43,9 +43,8 @@ def locate(lines, block, hint):
     return min(hits, key=lambda k: abs(k - hint)) if hits else None
 
 
-def patch_file(path, hunks):
-    """Возвращает (новый_текст | None если уже наложено). Бросает ValueError, если файл не тот."""
-    raw = path.read_bytes().decode("utf-8")
+def patch_text(raw, hunks):
+    """Возвращает новый текст либо None, если патч уже наложен. Бросает ValueError, если файл не тот."""
     nl = "\r\n" if "\r\n" in raw else "\n"
     lines = raw.split(nl)
     done, shift = 0, 0
@@ -66,28 +65,34 @@ def patch_file(path, hunks):
 
 
 def main(revert):
-    plan = []
-    for patch in sorted((ROOT / "patches").glob("*.patch")):
+    """Сначала считает результат по всем патчам в памяти (один файл могут править несколько), потом пишет на диск."""
+    texts, changed, report = {}, set(), []
+    for patch in sorted((ROOT / "patches").glob("*.patch"), reverse=revert):
         for rel, hunks in parse(patch.read_text(encoding="utf-8")).items():
             if revert:
                 hunks = [(start, new, old) for start, old, new in hunks]
             target = APPLIO / rel
             try:
-                plan.append((patch.name, target, patch_file(target, hunks)))
+                if target not in texts:
+                    texts[target] = target.read_bytes().decode("utf-8")
+                text = patch_text(texts[target], hunks)
             except (OSError, ValueError) as e:
                 raise SystemExit(
                     "%s: %s: %s\nПатчи рассчитаны на Applio 3.6.5 — проверь версию в Applio/assets/config.json."
                     % (patch.name, rel, e)
                 )
-    for name, target, text in plan:
-        if text is None:
-            print("%-28s %s — %s" % (name, target.relative_to(APPLIO), "нечего откатывать" if revert else "уже наложен"))
-            continue
+            if text is not None:
+                texts[target] = text
+                changed.add(target)
+            report.append((patch.name, target, text is not None))
+    for target in changed:
         backup = target.with_name(target.name + ".orig")
         if not revert and not backup.exists():
             shutil.copy2(target, backup)
-        target.write_bytes(text.encode("utf-8"))
-        print("%-28s %s — %s" % (name, target.relative_to(APPLIO), "откатан" if revert else "наложен"))
+        target.write_bytes(texts[target].encode("utf-8"))
+    for name, target, did in report:
+        status = ("откатан" if revert else "наложен") if did else ("нечего откатывать" if revert else "уже наложен")
+        print("%-30s %s — %s" % (name, target.relative_to(APPLIO), status))
 
 
 if __name__ == "__main__":

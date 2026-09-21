@@ -4,11 +4,12 @@
 !/.gitattributes
 !/LICENSE
 !/README.md
-!/README.ru.md
+!/README.en.md
 !/*.bat
 !/install.ps1
 !/model/
 !/patches/
+!/samples/
 !/tools/
 
 __pycache__/

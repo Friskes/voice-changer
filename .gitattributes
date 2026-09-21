@@ -4,3 +4,4 @@
 *.py text eol=lf
 *.patch text eol=lf
 *.md text eol=lf
+*.mp3 binary
